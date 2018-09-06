@@ -15,6 +15,7 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -405,95 +406,114 @@ public class OrderActivity extends AppCompatActivity implements LocationListener
 
     void getSelectedItemAndPrice() {
 
-        SalesSKUArrayResponse skuArrayResponse;
+        try {
+            SalesSKUArrayResponse skuArrayResponse;
 
 
-        beemDatabase.removeSelectedItemTableRaws();
+            beemDatabase.removeSelectedItemTableRaws();
 
-        int listLength = listView_order.getChildCount();
+            int listLength = listView_order.getChildCount();
 
-        int checkSelectionExist = 0;
-        doubleQuantity = 0;
+            int checkSelectionExist = 0;
+            doubleQuantity = 0;
 
-        int looseItem, cartonItem;
+            int looseItem, cartonItem;
 
-        if  (listLength > 0) {
+            if (listLength > 0) {
 
-            for (int i = 0; i < listLength; i++) {
+                for (int i = 0; i < listLength; i++) {
 
-                looseItem = 0; cartonItem = 0;
+                    looseItem = 0;
+                    cartonItem = 0;
 
-                view = listView_order.getChildAt(i);
+                    view = listView_order.getChildAt(i);
 
-                txtView_name = (TextView) view.findViewById(R.id.txtView_name);
+                    txtView_name = (TextView) view.findViewById(R.id.txtView_name);
 
-                edtText_loose = (EditText) view.findViewById(R.id.edtText_loose);
-                edtText_carton = (EditText) view.findViewById(R.id.edtText_carton);
+                    edtText_loose = (EditText) view.findViewById(R.id.edtText_loose);
+                    edtText_carton = (EditText) view.findViewById(R.id.edtText_carton);
 
-                String looseText = edtText_loose.getText().toString().trim();
-                String cartonText = edtText_carton.getText().toString().trim();
+                    String looseText = edtText_loose.getText().toString().trim();
+                    String cartonText = edtText_carton.getText().toString().trim();
 
-                if (looseText.equals("")  &&
-                        cartonText.equals("")) {
-                } else if (looseText.length() > 0 &&
-                        cartonText.length() > 0){
-                    doubleQuantity += 1;
-                    checkSelectionExist++;
-                } else if (looseText.length() > 0 &&
-                        cartonText.equals("")){
-                    looseItem = Integer.parseInt(looseText);
-                } else if (looseText.equals("") &&
-                        cartonText.length() > 0){
-                    cartonItem = Integer.parseInt(cartonText);
-                }
+                    if (looseText.equals("") &&
+                            cartonText.equals("")) {
+                    } else if (looseText.length() > 0 &&
+                            cartonText.length() > 0) {
+                        doubleQuantity += 1;
+                        checkSelectionExist++;
+                    } else if (looseText.length() > 0 &&
+                            cartonText.equals("")) {
+                        looseItem = Integer.parseInt(looseText);
+                    } else if (looseText.equals("") &&
+                            cartonText.length() > 0) {
+                        cartonItem = Integer.parseInt(cartonText);
+                    }
 
 //                if (looseItem != 0 || cartonItem != 0 && doubleQuantity == 0) {
 //                    checkSelectionExist++;
 //                }
 
-                if (looseItem > 0 || cartonItem > 0) {
+                    if (looseItem > 0 || cartonItem > 0) {
 
-                    checkSelectionExist++;
+                        checkSelectionExist++;
 
-                    int saleTypes, totalItem;
-                    if (cartonItem != 0) {
-                        saleTypes = 1;
-                        totalItem = cartonItem;
-                    } else {
-                        saleTypes = 0;
-                        totalItem = looseItem;
+                        int saleTypes = 0, totalItem = 0;
+                        if (cartonItem != 0) {
+                            saleTypes = 1;
+                            totalItem = cartonItem;
+                        } else if (looseItem != 0) {
+                            saleTypes = 0;
+                            totalItem = looseItem;
+                        }
+
+
+                        skuArrayResponse = salesSKUArrayResponseArrayList.get(i);
+                        LoginResponse loginResponse = realmCRUD.getLoginInformationDetails();
+//                        LoginResponse loginResponse = beemDatabase.getUserDetail();
+
+
+//                        try
+//                        {
+//                            if(TextUtils.isEmpty(loginResponse.getStoreId()))
+//                                number = Integer.parseInt(str);
+//                        }
+//                        catch (NumberFormatException e)
+//                        {
+//                            number = 0;
+//                        }
+
+
+                        HolderListModel holder = new HolderListModel(Integer.parseUnsignedInt(loginResponse.getStoreId()), saleStatus, appUtils.getDate(), skuArrayResponse.getBrand(),
+                                0, skuArrayResponse.getCateId(), saleTypes, totalItem, skuArrayResponse.getPrice(),
+                                skuArrayResponse.getPrice() * totalItem);
+
+                        holderListModelList.add(holder);
+
                     }
 
-                    skuArrayResponse = salesSKUArrayResponseArrayList.get(i);
-                    LoginResponse loginResponse = beemDatabase.getUserDetail();
-
-                    HolderListModel holder = new HolderListModel(Integer.valueOf(loginResponse.getStoreId()), saleStatus, appUtils.getDate(), skuArrayResponse.getBrand(),
-                            0, skuArrayResponse.getCateId(), saleTypes, totalItem, skuArrayResponse.getPrice(),
-                            skuArrayResponse.getPrice() * totalItem);
-
-                    holderListModelList.add(holder);
-
                 }
 
-            }
+                if (checkSelectionExist > 0) {
 
-            if (checkSelectionExist > 0) {
-
-                if (doubleQuantity > 0) {
-                    holderListModelList.clear();
-                    customAlertDialog.hideDialog();
-                    customAlertDialog.showDialog(false);
+                    if (doubleQuantity > 0) {
+                        holderListModelList.clear();
+                        customAlertDialog.hideDialog();
+                        customAlertDialog.showDialog(false);
+                    } else {
+                        sendOrder(saleStatus);
+                    }
                 } else {
-                    sendOrder(saleStatus);
+                    customAlertDialog.hideDialog();
+                    customAlertDialog.showDialog(true);
                 }
             } else {
-                customAlertDialog.hideDialog();
-                customAlertDialog.showDialog(true);
-            }
-        } else {
-            listView_order.setVisibility(View.GONE);
-            frameLayout_noProducts.setVisibility(View.VISIBLE);
+                listView_order.setVisibility(View.GONE);
+                frameLayout_noProducts.setVisibility(View.VISIBLE);
 
+            }
+        }catch (NumberFormatException e) {
+            Log.i("stackTrace", e.getLocalizedMessage());
         }
 
     }
